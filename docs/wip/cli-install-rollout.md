@@ -1,6 +1,6 @@
 # CLI Install & Distribution — Rollout & Channel Experiments
 
-## Status: IN PROGRESS (~55%) — Phase 1: packaging RESOLVED; `install.sh` + build + release CI authored & locally verified. **One decision left: how to expose binaries publicly while `fob-cli` stays private** (private-repo Releases aren't anonymously downloadable). Later rungs still gated.
+## Status: IN PROGRESS (~75%) — Phase 1 curl install **VALIDATED END-TO-END on real infra**: `curl -fsSL https://get.finopsbricks.com/install.sh | sh` downloads the platform binary from Cloudflare R2, verifies the checksum, and installs a working `fob` — closed-source, free plan. Remaining: add CI secrets + cut first tag; `install.ps1` (deferred). Later rungs still gated.
 
 Decide *how the `fob-<tool>` family reaches each audience*, one experiment at a time. This is the
 **decisions** tracker that sits on top of the **knowledge** in
@@ -99,21 +99,23 @@ audience clicks through terminal warnings) — signing is Phase 4's unknown.
       `SHA256SUMS`; `.github/workflows/release.yml` (tag `v*` → `contents: write` → `bun run build` →
       `softprops/action-gh-release` **draft**). Matches `apps/fob-watch/release.yml`'s tag pattern but
       single-runner (Bun cross-compiles). Full build verified locally: 5 binaries, 61–94 MB.
-- [ ] **⚠️ Public download vs private repo — DECISION NEEDED (finding 2026-07-26).** `fob-cli` is a
-      **private** GitHub repo (correct for closed-source), but **private-repo Release assets and
-      `raw.githubusercontent` are NOT anonymously downloadable** — a bare `curl | sh` would 404 without
-      a token. So closed-source + GitHub-Releases + public curl can't all come from the *source* repo.
-      Clean resolutions (binaries are compiled, so exposing them does **not** open source —
-      [open-vs-closed-source](./cli-install-and-distribution/open-vs-closed-source.md)):
-      1. **Public `dist` repo** (e.g. `finopsbricks/fob` or `fob-dist`) holding only `install.sh` +
-         release binaries; the source stays private. CI pushes artifacts there. *(recommended — cheapest,
-         stays on GitHub)*
-      2. **CDN / object store** (R2/S3 public bucket) behind `get.fob.io`; CI uploads. *(nicer URL, more setup)*
-      3. Flip `fob-cli` public now. *(reopens the OSS decision we're deliberately deferring — no)*
-      `install.sh`'s `REPO` var is the only thing that changes once this is picked.
-- [ ] **Cut the first release** (push a `v*` tag → CI drafts the release → publish) — **gated on the
-      decision above** so the curl one-liner actually resolves. Local tag `v1.0.0` exists but is not the
-      binary release; use a fresh tag after wiring the dist target.
+- [x] **Public download vs private repo — DECIDED & DONE: Cloudflare R2 (2026-07-26).** `fob-cli`
+      stays a **private** GitHub repo; compiled binaries are served publicly from an R2 bucket (`fob-cli`)
+      behind the custom domain **`get.finopsbricks.com`** (zone already on the same CF account). Free
+      plan (10 GB + zero egress; we use ~450 MB). Closed-source preserved — binaries are opaque.
+      - Setup: `wrangler` installed + `wrangler login`; `wrangler r2 bucket create fob-cli`;
+        `wrangler r2 bucket domain add fob-cli --domain get.finopsbricks.com --zone-id … --min-tls 1.2`.
+      - **Gotcha logged:** wrangler v4 `r2 object put/get` default to a **local** dev store — must pass
+        **`--remote`** to hit the real bucket (first upload silently went local → 404s over https).
+      - **Validated:** real `curl … | sh` on this Mac → downloaded `fob-darwin-arm64`, `checksum ok`,
+        installed, `fob help` ran. `install.sh` now points at `$FOB_BASE_URL` (default the R2 domain).
+- [ ] **Cut the first tagged release via CI.** `release.yml` repointed to R2 (build → upload latest at
+      root **+** versioned under the tag prefix). **Needs two repo secrets before the first tag:**
+      `CLOUDFLARE_API_TOKEN` (Workers R2 Storage: Edit) + `CLOUDFLARE_ACCOUNT_ID`
+      (`9df1ca9e13144855866a6cdc3dd374e4`). Until then, uploads are manual via `wrangler --remote`
+      (done once for the current binaries).
+- [ ] **Nice-to-have:** teach the `fob` dispatcher a real `--version` (install.sh currently falls back
+      to a generic line because the launcher has no version flag).
 
 **Explicitly deferred (Phase-1 pure alternatives — same audience, zero new constraint):**
 `npm i -g` (crosses Runtime, only a stopgap), Homebrew tap, winget, choco, scoop, `install.ps1`.

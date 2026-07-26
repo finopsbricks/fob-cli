@@ -1,13 +1,13 @@
 #!/usr/bin/env sh
 # fob installer — downloads the self-contained `fob` binary for your platform
-# from GitHub Releases and installs it to ~/.fob/bin. No sudo, no Node, and it
-# does NOT edit your shell config — if ~/.fob/bin isn't on PATH it just prints
-# the line for you to add. Usage:
-#   curl -fsSL https://raw.githubusercontent.com/finopsbricks/fob-cli/main/install.sh | sh
+# and installs it to ~/.fob/bin. No sudo, no Node, and it does NOT edit your
+# shell config — if ~/.fob/bin isn't on PATH it just prints the line to add.
+# Binaries are served from Cloudflare R2 (get.finopsbricks.com). Usage:
+#   curl -fsSL https://get.finopsbricks.com/install.sh | sh
 #   FOB_VERSION=v1.2.0 sh install.sh      # pin a version (default: latest)
 set -eu
 
-REPO="finopsbricks/fob-cli"
+BASE_URL="${FOB_BASE_URL:-https://get.finopsbricks.com}"
 BINDIR="${FOB_BIN_DIR:-$HOME/.fob/bin}"
 VERSION="${FOB_VERSION:-latest}"
 
@@ -26,11 +26,11 @@ case "$arch" in
 esac
 asset="fob-${os}-${arch}"
 
-# --- resolve download URLs (latest vs pinned tag) ---
+# --- resolve download URLs (latest at root; pinned version under a prefix) ---
 if [ "$VERSION" = "latest" ]; then
-  base="https://github.com/$REPO/releases/latest/download"
+  base="$BASE_URL"
 else
-  base="https://github.com/$REPO/releases/download/$VERSION"
+  base="$BASE_URL/$VERSION"
 fi
 
 # --- fetch helper ---
