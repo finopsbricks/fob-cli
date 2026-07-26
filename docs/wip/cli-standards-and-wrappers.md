@@ -17,6 +17,9 @@ gives a single `fob <tool> …` entry point without coupling the wrappers togeth
 >   `./cli-secrets-advanced-layers.md` (Layer 2/3 keychain, token
 >   lifecycle C parked).
 > - fob-email retrofit → `finopsbricks/cli/fob-email/docs/wip/cli-config-and-secrets.md` (all phases done).
+> - **Install & distribution** (how the family ships/installs/updates/onboards) → research staged in
+>   `./cli-install-and-distribution/` (9-note survey; parallels the config/secrets research). Rollout
+>   housekeeping item "wire the 4 binaries on PATH" is the near-term slice of this larger question.
 
 ## Problem Statement
 
@@ -271,6 +274,10 @@ the fob-stm yargs skeleton. [`d867a87`] Own sibling WIP (all phases done).
   DONE (A/B/E/F/G/D shipped, graduated into `engineering-standards/cli/config-and-secrets.md`)
 - `./split-into-fob-orc-and-fob-worker.md` (co-located) — the cli-fob split → `fob-orc` + `fob-worker`
   + this `fob` dispatcher (all done)
+- `./cli-install-and-distribution/` (co-located) — **install & distribution research** (9-note survey:
+  runtime/packaging, channels, code-signing, open-vs-closed, family install model, updates, onboarding
+  + a 15-CLI tool matrix). Draft knowledge; decisions still open (compiler, batteries-included vs
+  siblings, OSS, which channels). Sibling to `../cli-industry-research/`.
 - `../../../fob-stm/docs/wip/cli-lib-unification.md` — fob-stm's own CLI+library unification (done)
 - `../../../fob-email/docs/wip/cli-config-and-secrets.md` — applying config/secrets to fob-email (done)
 - `finopsbricks/apps/statements.finopsbricks.com/docs/wip/whoami-endpoint.md` — the
