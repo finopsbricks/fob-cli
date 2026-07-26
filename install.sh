@@ -45,9 +45,9 @@ echo "fob: installing $asset ($VERSION) → $BINDIR"
 tmp="$(mktemp)"
 fetch "$base/$asset" "$tmp"
 
-# --- verify checksum against the release SHA256SUMS (if present) ---
+# --- verify checksum against the release fob-SHA256SUMS (if present) ---
 sums="$(mktemp)"
-if fetch "$base/SHA256SUMS" "$sums" 2>/dev/null; then
+if fetch "$base/fob-SHA256SUMS" "$sums" 2>/dev/null; then
   expected="$(awk -v f="$asset" '$2==f || $2=="*"f {print $1}' "$sums" | head -n1)"
   if [ -n "$expected" ]; then
     if command -v sha256sum >/dev/null 2>&1; then actual="$(sha256sum "$tmp" | awk '{print $1}')"

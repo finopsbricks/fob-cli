@@ -44,8 +44,8 @@ describe('resolveTool', () => {
 });
 
 describe('plan', () => {
-  it('lists on bare invocation and help tokens (no built-ins)', () => {
-    for (const argv of [[], ['help'], ['--help'], ['-h'], ['--list']]) {
+  it('lists on bare invocation, help tokens, and the list/ls built-ins', () => {
+    for (const argv of [[], ['help'], ['--help'], ['-h'], ['--list'], ['list'], ['ls']]) {
       expect(plan(argv, env)).toEqual({ action: 'list' });
     }
   });
@@ -61,11 +61,31 @@ describe('plan', () => {
     expect(d.action).toBe('error');
     expect(d.message).toMatch(/'bogus' is not a fob command/);
   });
+  it('routes install/add to the install action with the tool name', () => {
+    expect(plan(['install', 'email'], env)).toEqual({ action: 'install', tool: 'email' });
+    expect(plan(['add', 'email'], env)).toEqual({ action: 'install', tool: 'email' });
+    expect(plan(['install'], env).action).toBe('error');
+  });
+  it('routes remove/uninstall/rm to the remove action with the tool name', () => {
+    expect(plan(['remove', 'email'], env)).toEqual({ action: 'remove', tool: 'email' });
+    expect(plan(['uninstall', 'email'], env)).toEqual({ action: 'remove', tool: 'email' });
+    expect(plan(['rm', 'email'], env)).toEqual({ action: 'remove', tool: 'email' });
+    expect(plan(['remove'], env).action).toBe('error');
+  });
 });
 
 describe('formatToolList', () => {
-  it('lists tools, or says none found', () => {
+  it('lists installed tools, or says none found', () => {
     expect(formatToolList(['orc', 'worker'])).toContain('  orc');
     expect(formatToolList([])).toContain('No fob-<tool> executables found');
+  });
+  it('adds an "available" section for catalog tools that are not installed', () => {
+    const catalog = { tools: { orc: { summary: 'orchestration' }, email: { summary: 'mailboxes' } } };
+    const out = formatToolList(['orc'], catalog);
+    expect(out).toContain('Installed tools:');
+    expect(out).toContain('Available (not installed):');
+    expect(out).toMatch(/email .* → fob install email/);
+    // orc is installed → must not also appear as available
+    expect(out).not.toMatch(/orc .* → fob install orc/);
   });
 });

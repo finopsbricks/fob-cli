@@ -1,10 +1,10 @@
 /**
  * Git-style dispatch for the fob-<tool> family.
  *
- * Exactly how `git foo` works: no registry, no manifest — any executable named
- * `fob-<tool>` on `$PATH` becomes `fob <tool>`. The launcher owns NO built-in
- * subcommands (the old worker-context `fob` commands moved to `fob-worker`), so
- * it is pure sugar over the standalone binaries.
+ * Like `git foo`: any executable named `fob-<tool>` on `$PATH` becomes
+ * `fob <tool>`. On top of that pure dispatch, the launcher owns a small set of
+ * reserved built-ins — `install`, `remove`, `list` — that manage the family via
+ * the catalog (catalog.js/install.js). Everything else falls through to PATH.
  */
 
 import { readdirSync, statSync, accessSync, constants } from 'node:fs';
@@ -60,35 +60,68 @@ export function resolveTool(tool, env = process.env) {
   return null;
 }
 
-/** The `fob help` / bare-`fob` listing text. */
-export function formatToolList(tools) {
+/**
+ * The `fob help` / bare-`fob` listing text.
+ * @param {string[]} installed  discovered tool names (on PATH)
+ * @param {object|null} [catalog]  optional catalog → adds an "available" section
+ */
+export function formatToolList(installed, catalog = null) {
   const lines = [
     'fob — git-style dispatcher for the fob-<tool> CLI family',
     '',
-    'Usage: fob <tool> [args...]   (e.g. `fob orc stations list`, `fob worker procs list`)',
+    'Usage: fob <tool> [args...]   (e.g. `fob orc stations list`, `fob email inbox list`)',
     '',
   ];
-  if (tools.length) {
-    lines.push('Available tools:');
-    for (const t of tools) lines.push(`  ${t}`);
-    lines.push('', "Run `fob <tool> --help` for a tool's commands.");
+  const installedSet = new Set(installed);
+  const summaryOf = (t) => catalog?.tools?.[t]?.summary;
+
+  if (installed.length) {
+    lines.push('Installed tools:');
+    for (const t of installed) {
+      const s = summaryOf(t);
+      lines.push(s ? `  ${t.padEnd(10)} ${s}` : `  ${t}`);
+    }
   } else {
     lines.push('No fob-<tool> executables found on PATH.');
   }
+
+  const available = catalog
+    ? Object.keys(catalog.tools).filter((t) => !installedSet.has(t)).sort()
+    : [];
+  if (available.length) {
+    lines.push('', 'Available (not installed):');
+    for (const t of available) {
+      const s = (catalog.tools[t].summary || '').padEnd(26);
+      lines.push(`  ${t.padEnd(10)} ${s} → fob install ${t}`);
+    }
+  }
+
+  lines.push('', "Run `fob <tool> --help`, or `fob install <tool>` to add one.");
   return lines.join('\n');
 }
 
-const LIST_TOKENS = new Set(['help', '--help', '-h', '--list', undefined]);
+const LIST_TOKENS = new Set(['help', '--help', '-h', '--list', 'list', 'ls', undefined]);
+const INSTALL_TOKENS = new Set(['install', 'add']);
+const REMOVE_TOKENS = new Set(['remove', 'uninstall', 'rm']);
 
 /**
  * Decide what the launcher should do for a given argv (no side effects).
  * @param {string[]} argv  args after `fob`
  * @param {NodeJS.ProcessEnv} [env]
- * @returns {{ action: 'list' } | { action: 'error', message: string } | { action: 'exec', exe: string, args: string[] }}
+ * @returns {{action:'list'} | {action:'install'|'remove', tool:string} | {action:'error', message:string} | {action:'exec', exe:string, args:string[]}}
  */
 export function plan(argv, env = process.env) {
   const [tool, ...rest] = argv;
   if (LIST_TOKENS.has(tool)) return { action: 'list' };
+
+  if (INSTALL_TOKENS.has(tool)) {
+    if (!rest[0]) return { action: 'error', message: "fob: 'install' needs a tool name, e.g. `fob install email`." };
+    return { action: 'install', tool: rest[0] };
+  }
+  if (REMOVE_TOKENS.has(tool)) {
+    if (!rest[0]) return { action: 'error', message: "fob: 'remove' needs a tool name, e.g. `fob remove email`." };
+    return { action: 'remove', tool: rest[0] };
+  }
 
   const exe = resolveTool(tool, env);
   if (!exe) {

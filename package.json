@@ -11,7 +11,11 @@
     "release": "bash scripts/release.sh",
     "test": "node --experimental-vm-modules node_modules/.bin/jest"
   },
-  "keywords": ["cli", "dispatcher", "finops"],
+  "keywords": [
+    "cli",
+    "dispatcher",
+    "finops"
+  ],
   "license": "MIT",
   "devDependencies": {
     "@jest/globals": "^29.7.0",

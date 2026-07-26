@@ -1,0 +1,6 @@
+{
+  "base_url": "https://get.finopsbricks.com",
+  "tools": {
+    "email": { "summary": "send & fetch mailboxes" }
+  }
+}

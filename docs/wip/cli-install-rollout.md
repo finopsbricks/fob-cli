@@ -116,6 +116,22 @@ audience clicks through terminal warnings) — signing is Phase 4's unknown.
 - [ ] **Automate via CI (when GitHub is back).** `release.yml` mirrors the script (tag `v*` → build →
       R2). **Needs two repo secrets:** `CLOUDFLARE_API_TOKEN` (Workers R2 Storage: Edit) +
       `CLOUDFLARE_ACCOUNT_ID` (`9df1ca9e13144855866a6cdc3dd374e4`).
+- [x] **Catalog + `fob install` (family install from within `fob`).** So users install `fob` once and
+      add siblings with `fob install <tool>` instead of a separate curl per tool
+      ([family-install-model](./cli-install-and-distribution/family-install-model.md)).
+      - `src/catalog.js` — baked-in fallback catalog + live `getCatalog()` from `<base>/catalog.json`
+        (remote authoritative; offline falls back). `src/install.js` — `installTool`/`removeTool`:
+        download from R2 → verify `<bin>-SHA256SUMS` → `~/.fob/bin` (no rc-file edits).
+      - Dispatcher built-ins: `fob list`/`ls` (installed ✓ + available ○), `fob install|add <tool>`,
+        `fob remove|uninstall|rm <tool>`. Pure PATH dispatch still handles everything else. 10/10 tests.
+      - **Per-tool assets in the shared bucket:** `<bin>-<os>-<arch>` + `<bin>-SHA256SUMS`
+        (`fob-*`, `fob-email-*`, …) so tools don't clobber each other's manifest. `build.sh`/`release.sh`
+        parameterized via `FOB_BIN`/`FOB_ENTRY` → a sibling repo publishes with a one-line change.
+      - `catalog.json` (R2 root) is the live tool list; **validated** `fob-email` as the first catalogued
+        sibling.
+- [ ] **Full sibling matrix + dispatcher re-release.** Proof shipped `fob-email` **darwin-arm64** only;
+      publish the other 4 targets (`cd fob-email && FOB_BIN=fob-email FOB_ENTRY=./bin/cli.js npm run release`)
+      and re-release the dispatcher so `fob-SHA256SUMS` + new `install.sh`/`catalog.json` are current.
 - [ ] **Nice-to-have:** teach the `fob` dispatcher a real `--version` (install.sh currently falls back
       to a generic line because the launcher has no version flag).
 
