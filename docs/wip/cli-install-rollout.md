@@ -1,6 +1,6 @@
 # CLI Install & Distribution — Rollout & Channel Experiments
 
-## Status: IN PROGRESS (~35%) — Phase 1: **packaging unknown RESOLVED** (Bun compiles the ESM family Node-free; cross-compiles all targets). Remaining Phase-1 work: `install.sh` + release plumbing. Later rungs still gated.
+## Status: IN PROGRESS (~55%) — Phase 1: packaging RESOLVED; `install.sh` + build + release CI authored & locally verified. **One decision left: how to expose binaries publicly while `fob-cli` stays private** (private-repo Releases aren't anonymously downloadable). Later rungs still gated.
 
 Decide *how the `fob-<tool>` family reaches each audience*, one experiment at a time. This is the
 **decisions** tracker that sits on top of the **knowledge** in
@@ -91,15 +91,29 @@ audience clicks through terminal warnings) — signing is Phase 4's unknown.
       binaries — validates the [family-install-model](./cli-install-and-distribution/family-install-model.md) baseline.
 - [x] **Measured:** ~61 MB per binary (bundled runtime — the expected size floor; siblings share it, so
       N tools ≈ N×61 MB unless we later dedup via a shared runtime). Build output gitignored (`dist/`).
-- [ ] **`install.sh`** — detect os/arch → download the right binary(ies) from the release host → drop
-      into `~/.fob/bin` → add to PATH → print next steps. Model on Claude Code's `claude.ai/install.sh`.
-      (`install.ps1` is a Phase-1 *pure alternative* for the same audience → defer unless a Windows dev
-      needs it now.)
-- [ ] **Release plumbing:** host binaries on GitHub Releases of `fob-cli`; publish a checksum manifest
-      the install script verifies.
-- [ ] **Publish the repo** (currently unpublished) enough to host releases. OSS-vs-closed decision is
-      *not* required for this — a release host works either way
-      ([open-vs-closed-source](./cli-install-and-distribution/open-vs-closed-source.md)).
+- [x] **`install.sh`** — detects os/arch, downloads the asset + `SHA256SUMS`, **verifies the checksum**,
+      installs to `~/.fob/bin`, and only *prints* the PATH line (does **not** edit rc files — per Alex,
+      no machine-config changes). `FOB_VERSION` / `FOB_BIN_DIR` overrides. Syntax + checksum-verify logic
+      tested locally against the real build. (`install.ps1` deferred — Phase-1 pure alternative.)
+- [x] **Build script + release CI.** `scripts/build.sh` (`bun run build`) compiles all 5 targets +
+      `SHA256SUMS`; `.github/workflows/release.yml` (tag `v*` → `contents: write` → `bun run build` →
+      `softprops/action-gh-release` **draft**). Matches `apps/fob-watch/release.yml`'s tag pattern but
+      single-runner (Bun cross-compiles). Full build verified locally: 5 binaries, 61–94 MB.
+- [ ] **⚠️ Public download vs private repo — DECISION NEEDED (finding 2026-07-26).** `fob-cli` is a
+      **private** GitHub repo (correct for closed-source), but **private-repo Release assets and
+      `raw.githubusercontent` are NOT anonymously downloadable** — a bare `curl | sh` would 404 without
+      a token. So closed-source + GitHub-Releases + public curl can't all come from the *source* repo.
+      Clean resolutions (binaries are compiled, so exposing them does **not** open source —
+      [open-vs-closed-source](./cli-install-and-distribution/open-vs-closed-source.md)):
+      1. **Public `dist` repo** (e.g. `finopsbricks/fob` or `fob-dist`) holding only `install.sh` +
+         release binaries; the source stays private. CI pushes artifacts there. *(recommended — cheapest,
+         stays on GitHub)*
+      2. **CDN / object store** (R2/S3 public bucket) behind `get.fob.io`; CI uploads. *(nicer URL, more setup)*
+      3. Flip `fob-cli` public now. *(reopens the OSS decision we're deliberately deferring — no)*
+      `install.sh`'s `REPO` var is the only thing that changes once this is picked.
+- [ ] **Cut the first release** (push a `v*` tag → CI drafts the release → publish) — **gated on the
+      decision above** so the curl one-liner actually resolves. Local tag `v1.0.0` exists but is not the
+      binary release; use a fresh tag after wiring the dist target.
 
 **Explicitly deferred (Phase-1 pure alternatives — same audience, zero new constraint):**
 `npm i -g` (crosses Runtime, only a stopgap), Homebrew tap, winget, choco, scoop, `install.ps1`.

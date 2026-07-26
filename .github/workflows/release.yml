@@ -1,0 +1,35 @@
+name: Release
+
+# Tag-driven, matching apps/fob-watch/.github/workflows/release.yml. Bun
+# cross-compiles every target from one runner, so no per-OS build matrix.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & release binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Build all targets
+        run: bun run build
+
+      - name: Draft GitHub Release with binaries
+        uses: softprops/action-gh-release@v2
+        with:
+          name: fob ${{ github.ref_name }}
+          draft: true
+          files: |
+            dist/fob-*
+            dist/SHA256SUMS
