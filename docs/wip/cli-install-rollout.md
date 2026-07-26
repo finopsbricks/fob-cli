@@ -109,11 +109,13 @@ audience clicks through terminal warnings) — signing is Phase 4's unknown.
         **`--remote`** to hit the real bucket (first upload silently went local → 404s over https).
       - **Validated:** real `curl … | sh` on this Mac → downloaded `fob-darwin-arm64`, `checksum ok`,
         installed, `fob help` ran. `install.sh` now points at `$FOB_BASE_URL` (default the R2 domain).
-- [ ] **Cut the first tagged release via CI.** `release.yml` repointed to R2 (build → upload latest at
-      root **+** versioned under the tag prefix). **Needs two repo secrets before the first tag:**
-      `CLOUDFLARE_API_TOKEN` (Workers R2 Storage: Edit) + `CLOUDFLARE_ACCOUNT_ID`
-      (`9df1ca9e13144855866a6cdc3dd374e4`). Until then, uploads are manual via `wrangler --remote`
-      (done once for the current binaries).
+- [x] **Manual release path (no GitHub needed).** `scripts/release.sh [version]` (`npm run release`)
+      builds all targets and uploads to R2 via the local `wrangler login` session — latest at root,
+      optional pinned copy under `/<version>/` — then verifies every object over https. This is the
+      GitHub-independent way to ship (used while GitHub was down 2026-07-26).
+- [ ] **Automate via CI (when GitHub is back).** `release.yml` mirrors the script (tag `v*` → build →
+      R2). **Needs two repo secrets:** `CLOUDFLARE_API_TOKEN` (Workers R2 Storage: Edit) +
+      `CLOUDFLARE_ACCOUNT_ID` (`9df1ca9e13144855866a6cdc3dd374e4`).
 - [ ] **Nice-to-have:** teach the `fob` dispatcher a real `--version` (install.sh currently falls back
       to a generic line because the launcher has no version flag).
 

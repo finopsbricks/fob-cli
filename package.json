@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "bash scripts/build.sh",
+    "release": "bash scripts/release.sh",
     "test": "node --experimental-vm-modules node_modules/.bin/jest"
   },
   "keywords": ["cli", "dispatcher", "finops"],
