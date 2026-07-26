@@ -1,5 +1,5 @@
 {
-  "name": "@fob/fob",
+  "name": "@fob/cli",
   "version": "1.0.0",
   "description": "Git-style dispatcher for the fob-<tool> CLI family (fob orc …, fob worker …, fob stm …).",
   "type": "module",

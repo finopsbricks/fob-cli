@@ -161,7 +161,8 @@ Done 2026-07-26 (new repo `cli/fob`, commit `0a38d3c`).
 
 ### Rollout / housekeeping ✅ (done 2026-07-26)
 - [x] **Published** all four as private `finopsbricks` GitHub repos: `fob-orc` (release `v0.1.0`),
-      `fob` (release `v1.0.0`), plus `fob-worker` and `fob-stm` pushed. Mirrors the `@fob/stm` precedent.
+      the dispatcher **`fob-cli`** (`@fob/cli`, binary `fob`; release `v1.0.0`) — repo renamed from
+      the initial `fob` for clarity — plus `fob-worker` and `fob-stm` pushed. Mirrors `@fob/stm`.
 - [x] **Renamed** the GitHub repo `finopsbricks/cli-fob` → `fob-worker` (`gh repo rename`); local remote
       updated; 6 commits pushed.
 - [x] **Linked** the family: `npm link` for `fob`/`fob-orc`/`fob-worker` (+ existing `fob-stm`/`fob-email`).
@@ -181,7 +182,7 @@ Done 2026-07-26 (new repo `cli/fob`, commit `0a38d3c`).
 
 **Created:**
 - `cli/fob-orc/**` — new orchestrator 2-in-1 (client `@fob/orc` + `fob-orc` CLI)
-- `cli/fob/**` — the git-style `fob` dispatcher
+- `cli/fob-cli/**` (`@fob/cli`, binary `fob`) — the git-style dispatcher
 
 **Transformed:**
 - `cli/fob-worker/**` (was `cli/cli-fob/`) — local plane; `workers`→`procs`; orchestrator commands removed
