@@ -1,0 +1,21 @@
+{
+  "name": "@fob/fob",
+  "version": "1.0.0",
+  "description": "Git-style dispatcher for the fob-<tool> CLI family (fob orc …, fob worker …, fob stm …).",
+  "type": "module",
+  "bin": {
+    "fob": "./bin/fob.js"
+  },
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/.bin/jest"
+  },
+  "keywords": ["cli", "dispatcher", "finops"],
+  "license": "MIT",
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
