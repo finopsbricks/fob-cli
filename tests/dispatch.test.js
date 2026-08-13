@@ -66,6 +66,9 @@ describe('plan', () => {
     expect(plan(['add', 'email'], env)).toEqual({ action: 'install', tool: 'email' });
     expect(plan(['install'], env).action).toBe('error');
   });
+  it('routes completion to the completion action', () => {
+    expect(plan(['completion'], env)).toEqual({ action: 'completion' });
+  });
   it('routes remove/uninstall/rm to the remove action with the tool name', () => {
     expect(plan(['remove', 'email'], env)).toEqual({ action: 'remove', tool: 'email' });
     expect(plan(['uninstall', 'email'], env)).toEqual({ action: 'remove', tool: 'email' });

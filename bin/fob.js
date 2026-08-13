@@ -8,7 +8,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { discoverTools, formatToolList, plan } from '../src/dispatch.js';
+import { completionScript, discoverTools, formatToolList, plan } from '../src/dispatch.js';
 import { getCatalog } from '../src/catalog.js';
 import { installTool, removeTool } from '../src/install.js';
 
@@ -23,6 +23,11 @@ async function main() {
       /* offline — fall back to installed-only listing */
     }
     console.log(formatToolList(discoverTools(), catalog));
+    return 0;
+  }
+
+  if (decision.action === 'completion') {
+    console.log(completionScript());
     return 0;
   }
 

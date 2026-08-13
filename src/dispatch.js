@@ -97,22 +97,88 @@ export function formatToolList(installed, catalog = null) {
   }
 
   lines.push('', "Run `fob <tool> --help`, or `fob install <tool>` to add one.");
+  lines.push('Tab completion: add `source <(fob completion)` to your ~/.bashrc or ~/.zshrc.');
   return lines.join('\n');
 }
 
 const LIST_TOKENS = new Set(['help', '--help', '-h', '--list', 'list', 'ls', undefined]);
 const INSTALL_TOKENS = new Set(['install', 'add']);
 const REMOVE_TOKENS = new Set(['remove', 'uninstall', 'rm']);
+const COMPLETION_TOKENS = new Set(['completion']);
+
+/**
+ * The bash/zsh completion script for `fob`.
+ *
+ * Completing `fob <tool> …` has to reach *into* the tool: `fob worker steps run
+ * <TAB>` should list live step slugs, which only `fob-worker` can enumerate. So
+ * the script special-cases the first word (tool names, discovered from PATH at
+ * completion time) and delegates everything after it to that tool's own
+ * yargs-style completer, passing the sub-argv along.
+ *
+ * Tools are discovered live rather than baked in, so installing a new
+ * `fob-<tool>` starts completing without re-sourcing this script.
+ */
+export function completionScript() {
+  return `###-begin-fob-completions-###
+#
+# fob command completion script
+#
+# Installation: fob completion >> ~/.bashrc  (or ~/.bash_profile on OSX)
+#
+_fob_completions()
+{
+  local cur_word prev_words tool
+  cur_word="\${COMP_WORDS[COMP_CWORD]}"
+
+  # First word after 'fob' → tool names + built-ins.
+  if [ "\$COMP_CWORD" -eq 1 ]; then
+    local tools builtins
+    builtins="help list install remove completion"
+    tools=$(compgen -c fob- 2>/dev/null | sed 's/^fob-//' | sort -u | tr '\\n' ' ')
+    COMPREPLY=( $(compgen -W "\${builtins} \${tools}" -- \${cur_word}) )
+    return 0
+  fi
+
+  tool="\${COMP_WORDS[1]}"
+
+  # 'fob install/remove <TAB>' → catalog tool names, same source as the listing.
+  if [ "\$tool" = "install" ] || [ "\$tool" = "remove" ]; then
+    local tools
+    tools=$(compgen -c fob- 2>/dev/null | sed 's/^fob-//' | sort -u | tr '\\n' ' ')
+    COMPREPLY=( $(compgen -W "\${tools}" -- \${cur_word}) )
+    return 0
+  fi
+
+  # Otherwise delegate to the tool's own completer, minus the leading 'fob'.
+  if ! command -v "fob-\${tool}" >/dev/null 2>&1; then
+    COMPREPLY=()
+    return 0
+  fi
+  prev_words=( "fob-\${tool}" "\${COMP_WORDS[@]:2}" )
+  local type_list
+  type_list=$("fob-\${tool}" --get-yargs-completions "\${prev_words[@]}" 2>/dev/null)
+  COMPREPLY=( $(compgen -W "\${type_list}" -- \${cur_word}) )
+
+  if [ \${#COMPREPLY[@]} -eq 0 ]; then
+    COMPREPLY=()
+  fi
+  return 0
+}
+complete -o bashdefault -o default -F _fob_completions fob
+###-end-fob-completions-###
+`;
+}
 
 /**
  * Decide what the launcher should do for a given argv (no side effects).
  * @param {string[]} argv  args after `fob`
  * @param {NodeJS.ProcessEnv} [env]
- * @returns {{action:'list'} | {action:'install'|'remove', tool:string} | {action:'error', message:string} | {action:'exec', exe:string, args:string[]}}
+ * @returns {{action:'list'} | {action:'completion'} | {action:'install'|'remove', tool:string} | {action:'error', message:string} | {action:'exec', exe:string, args:string[]}}
  */
 export function plan(argv, env = process.env) {
   const [tool, ...rest] = argv;
   if (LIST_TOKENS.has(tool)) return { action: 'list' };
+  if (COMPLETION_TOKENS.has(tool)) return { action: 'completion' };
 
   if (INSTALL_TOKENS.has(tool)) {
     if (!rest[0]) return { action: 'error', message: "fob: 'install' needs a tool name, e.g. `fob install email`." };
