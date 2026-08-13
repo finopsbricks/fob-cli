@@ -64,10 +64,28 @@ Startup/dependency figures are from a secondary source
 **commander** — the sharpest trade in the table. It has precisely what yargs lacks: a documented
 `Help` class you can subclass or configure (`.configureHelp()`, `.createHelp()`, `sortSubcommands`,
 `showGlobalOptions`, `.styleTitle()`) to control command-list layout. It is also zero-dependency and
-roughly 2× faster to start. **But shell completion is not in its documented feature set** — which is
-the one thing yargs was chosen for. Unless completion can be supplied another way, this fails the
-hard requirement. *Needs verification: is there a maintained completion plugin, and does it do
-dynamic values?*
+roughly 2× faster to start.
+
+**Verified 2026-08-13 against commander `15.0.0` (installed, API introspected): it has no
+completion API at all.** The only matching methods are `showSuggestionAfterError` /
+`_showSuggestionAfterError`, which are did-you-mean-on-typo, not shell completion. For contrast the
+same introspection found 20+ help methods (`configureHelp`, `createHelp`, `helpInformation`,
+`addHelpText`, …). Commander is rich exactly where yargs is poor and absent exactly where yargs
+delivers.
+
+[commander#2008](https://github.com/tj/commander.js/issues/2008) ("provide shell completions",
+opened 2023) is **closed with no implementation**.
+
+Third-party fills, both unusable here:
+
+| Package | Latest | Last published | Problem |
+|---|---|---|---|
+| `commander-completion` | 1.0.1 | 2022-06-13 | unmaintained ~4 years |
+| `commander-completion-carapace` | 1.0.0 | 2024-12-26 | needs [Carapace](https://carapace.sh), an external Go binary, installed per machine |
+
+**Verdict: commander fails the hard requirement.** Adopting it means either losing
+`fob steps run <TAB>`, hand-rolling completion in every one of six CLIs, or adding a stale dependency
+plus a Go binary to the install story. Not worth it for better help formatting.
 
 **oclif** — built by Salesforce for Heroku/Salesforce CLIs; designed for hundreds of commands and a
 plugin ecosystem. Help is a replaceable plugin, so full control. Costs ~30 dependencies and ~85–120ms
@@ -83,9 +101,10 @@ proven at scale. Both need a pass.
 
 ## Open questions
 
-1. **Does commander have viable dynamic completion?** This single question probably decides the
-   evaluation. If yes, commander is a serious candidate (better help control, zero deps, faster). If
-   no, it is disqualified and yargs likely stays.
+1. ~~**Does commander have viable dynamic completion?**~~ **Answered 2026-08-13: no.** Verified
+   against the installed `commander@15.0.0` — no completion API, upstream request closed unimplemented,
+   both third-party packages unusable (see above). Commander is out. This was expected to decide the
+   evaluation, and largely does: the strongest alternative fails the hard requirement.
 2. **Is `util.parseArgs` (Node native) enough on its own?** `@fob/cli` already proves a zero-dep CLI
    is viable here. If completion were hand-rolled once and copied, a framework might be unnecessary
    for the simpler CLIs. Larger question than it appears.
