@@ -51,6 +51,32 @@ shell** until 2026-08-13. A requirement that six of seven CLIs skip is a latent 
 So the honest cost of switching is: **write the ~30-line bash script once, copy it into each CLI, own
 it.** Real, but far short of disqualifying.
 
+### Measured 2026-08-13: what a working setup actually cost
+
+Having now built completion end-to-end (dispatcher included), the estimate above can be replaced
+with counts:
+
+| Code | Lines | Written by |
+|---|---|---|
+| `fob-worker` `.completion()` callback — candidate logic | 40 | **us** |
+| `fob-worker` `getStepSlugs()` + stdout suppression | 18 | **us** |
+| `fob-cli` `completionScript()` — raw bash, hand-written | 46 | **us** |
+| yargs' bash/zsh script template (`completion-templates.js`) | 48 | yargs |
+
+**104 lines hand-written against 48 generated** — and 46 of ours are a completion shell script, the
+very thing the framework was supposed to spare us, because yargs' generated script binds to
+`fob-worker` and the family is driven through the `fob` dispatcher.
+
+Every completion bug this session was in our 104 lines, never in their 48:
+
+- `fob-worker` `65fcbf0` — stdout pollution
+- `fob-worker` `e54b5f3` — every prefix returned nothing
+- `fob-cli` `8577af7` — dispatcher had no completion at all
+
+**Measured on this codebase, yargs' completion contribution is one 29-line bash template, for one of
+seven CLIs.** The "framework handles completion" premise in
+[D1](../decisions/0001-yargs-as-cli-framework.md) does not survive contact with the actual code.
+
 *Counterweight, though:* the two stale third-party packages (below) suggest people find that script
 annoying enough to abandon. And this project's own experience is not a strong endorsement of the
 "framework handles it" story either — completion shipped broken for a year, in the **hand-written**
@@ -63,6 +89,50 @@ parts, on both counts fixed 2026-08-13:
 
 yargs generated the script correctly throughout. The bugs were entirely ours — which is the part that
 does not change under any framework.
+
+## What yargs is actually earning its place on
+
+If completion is worth ~29 lines, the obvious question is "why yargs at all?" Measured across the
+family (2026-08-13), the answer is **not** the two reasons D1 gives. It is scale:
+
+| Repo | Commands | Options |
+|---|---|---|
+| `fob-zb` | 145 | 221 |
+| `cli-fobs` | 97 | 234 |
+| `fob-stm` | 59 | 169 |
+| `fob-email` | 36 | 89 |
+| `fob-orc` | 33 | 60 |
+| `fob-worker` | 25 | 30 |
+| **Total** | **395** | **803** |
+
+API usage across those repos:
+
+| Feature | Call sites |
+|---|---|
+| `.positional()` | 198 |
+| `.demandCommand()` | 90 |
+| `.alias()` | 12 |
+| `.group()` | 12 |
+| `.middleware()` | 6 |
+| `.strict()` | 5 |
+| `.conflicts()` | 3 |
+| `.completion()` | **1** |
+
+**395 commands and 803 options are the load-bearing thing** — the positional parsing, per-level
+`demandCommand` help, option grouping, `strict` rejection of unknown flags, and middleware for
+credential resolution. Completion is a single call site.
+
+This cuts both ways for the evaluation:
+
+- **Against switching:** the migration surface is 395 commands and 803 options across six repos, not
+  a few entry points. That is the real cost, and it dwarfs anything completion-related.
+- **For switching:** everything in that table has a direct commander equivalent
+  (`.argument()`, `.requiredOption()`, `.hook()`, `.addHelpText()`, `Help` class). None of it is
+  yargs-specific magic. And commander's `Help` class would fix the help-formatting problem that
+  opened this whole thread, which yargs structurally cannot.
+
+So the case for staying is **inertia at scale**, not capability — which is a legitimate reason, but a
+different one from what D1 records.
 
 ## Secondary criteria
 
@@ -176,10 +246,15 @@ proven at scale. Both need a pass.
 
 ## Next steps
 
-1. **Prototype one small CLI on commander** — `fob-orc` or `fob-zb` (~10 commits each, far cheaper
-   than `fob-worker`'s 126). Include the hand-rolled completion script so the real cost is measured,
-   not estimated. This is now the highest-information step: the paper comparison is a genuine trade,
-   so only a build settles it.
+1. **Prototype one small CLI on commander** — `fob-orc` is the right guinea pig: 33 commands / 60
+   options and only ~10 commits of history, versus `fob-zb`'s 145 commands. Include the hand-rolled
+   completion script so the real cost is measured, not estimated. This is now the highest-information
+   step: the paper comparison is a genuine trade, so only a build settles it.
+
+   The specific question a prototype answers, which no amount of doc-reading will: **how much of the
+   395-command / 803-option surface translates mechanically, and how much needs rethinking?** If
+   `.positional()` → `.argument()` is a sed-able transform, migration is tedious but safe. If it
+   isn't, six repos of it is prohibitive regardless of commander's merits.
 2. Fill the `?` cells for cac and clipanion. Clipanion is the most promising unexamined option —
    it powers Yarn Berry, which ships working completion.
 3. Benchmark startup locally rather than trusting the secondary source.
