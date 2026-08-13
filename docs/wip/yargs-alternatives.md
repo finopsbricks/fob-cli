@@ -23,15 +23,52 @@ one of the two reasons it was picked.
 
 **Dynamic shell completion.** `fob steps run <TAB>` enumerates step slugs by reading the filesystem
 at completion time — `getStepSlugs()` returns a promise, and yargs' `.completion()` callback accepts
-one. Any candidate must support async/dynamic completion, not just static command-name completion.
+one.
 
-A candidate that fails this is out, regardless of how good its help output is.
+**Revised 2026-08-13 — this is a soft requirement, not a hard one.** The first version of this doc
+called it hard and disqualified commander over it. That was wrong, for two reasons.
+
+*A framework is not what makes completion work.* Completion is a shell script you install separately
+after installing the CLI (`source <(fob-worker completion)`). The script calls the binary with a
+magic flag and pipes stdout into `compgen`. Nothing in it is yargs-specific. What a framework
+supplies is only:
+
+1. the bash/zsh script boilerplate — **48 lines** in yargs
+   (`yargs/build/lib/completion-templates.js`, 29 of them bash), regenerated on each
+   `<tool> completion` call and **not checked into any of our repos**;
+2. routing of the `--get-yargs-completions` flag to a callback — replaceable by an `if` at the top
+   of the entry file.
+
+The part that actually matters — deciding which candidates to return — is hand-written either way.
+`fob-worker`'s callback contains no yargs API beyond its signature. Precedent: **pm2 uses commander
+for parsing and its own vendored 229-line completer**, with a hand-written candidate function that
+queries `pm2.list()` live.
+
+*And the feature is barely used.* Audited across the family: **1 of 7 CLIs implements completion**
+(`fob-worker`; the other six have zero `.completion()` calls), and it was **not wired into any
+shell** until 2026-08-13. A requirement that six of seven CLIs skip is a latent one.
+
+So the honest cost of switching is: **write the ~30-line bash script once, copy it into each CLI, own
+it.** Real, but far short of disqualifying.
+
+*Counterweight, though:* the two stale third-party packages (below) suggest people find that script
+annoying enough to abandon. And this project's own experience is not a strong endorsement of the
+"framework handles it" story either — completion shipped broken for a year, in the **hand-written**
+parts, on both counts fixed 2026-08-13:
+
+- `fob-worker` `65fcbf0` — step-discovery logging on stdout polluted the candidate list (51 candidates
+  instead of 44)
+- `fob-worker` `e54b5f3` — the callback treated the in-progress partial word as a completed arg, so
+  **every** prefix returned nothing (`fob-worker li<TAB>` → empty). Only a bare `<TAB>` worked.
+
+yargs generated the script correctly throughout. The bugs were entirely ours — which is the part that
+does not change under any framework.
 
 ## Secondary criteria
 
 | # | Criterion | Why it matters here |
 |---|---|---|
-| 1 | Dynamic completion | **Hard requirement** — see above |
+| 1 | Dynamic completion | Soft — costs a ~30-line script to hand-roll; see above |
 | 2 | Help output control | The friction that prompted this doc |
 | 3 | Nested subcommands | `fob <resource> <action>` is two levels, sometimes three |
 | 4 | Dependency footprint | Six CLIs ship this; `@fob/cli` is proudly zero-dep |
@@ -83,9 +120,23 @@ Third-party fills, both unusable here:
 | `commander-completion` | 1.0.1 | 2022-06-13 | unmaintained ~4 years |
 | `commander-completion-carapace` | 1.0.0 | 2024-12-26 | needs [Carapace](https://carapace.sh), an external Go binary, installed per machine |
 
-**Verdict: commander fails the hard requirement.** Adopting it means either losing
-`fob steps run <TAB>`, hand-rolling completion in every one of six CLIs, or adding a stale dependency
-plus a Go binary to the install story. Not worth it for better help formatting.
+**Verdict (revised 2026-08-13): commander is viable, not disqualified.** The earlier verdict —
+"fails the hard requirement" — assumed a framework must supply completion. It doesn't: the
+completion script is ~30 lines of bash installed separately, and the candidate logic is hand-written
+under either framework (pm2 proves the combination in production).
+
+The real trade:
+
+| | yargs | commander |
+|---|---|---|
+| Completion script | generated (48 lines vendor code) | you write and own it (~30 lines) |
+| Help output control | none — no formatter API | `Help` class, `configureHelp()`, `createHelp()` |
+| Dependencies | ~7 | 0 |
+| Cold start | ~35–42ms | ~18–22ms |
+
+So the choice is roughly **"generated completion boilerplate" vs "help you can actually format,
+zero deps, ~2× faster start."** That is a genuine trade, not a knockout either way — and worth
+prototyping rather than arguing about on paper.
 
 **oclif** — built by Salesforce for Heroku/Salesforce CLIs; designed for hundreds of commands and a
 plugin ecosystem. Help is a replaceable plugin, so full control. Costs ~30 dependencies and ~85–120ms
@@ -101,10 +152,11 @@ proven at scale. Both need a pass.
 
 ## Open questions
 
-1. ~~**Does commander have viable dynamic completion?**~~ **Answered 2026-08-13: no.** Verified
-   against the installed `commander@15.0.0` — no completion API, upstream request closed unimplemented,
-   both third-party packages unusable (see above). Commander is out. This was expected to decide the
-   evaluation, and largely does: the strongest alternative fails the hard requirement.
+1. ~~**Does commander have viable dynamic completion?**~~ **Answered 2026-08-13, then re-answered.**
+   Commander has no completion *API* (verified against the installed `15.0.0`), and both third-party
+   packages are unusable. But that was the wrong question — completion is an
+   install-time shell script, not a framework feature, so the answer is "you write ~30 lines and own
+   it," not "commander is out." **Commander stays in the running.**
 2. **Is `util.parseArgs` (Node native) enough on its own?** `@fob/cli` already proves a zero-dep CLI
    is viable here. If completion were hand-rolled once and copied, a framework might be unnecessary
    for the simpler CLIs. Larger question than it appears.
@@ -124,8 +176,12 @@ proven at scale. Both need a pass.
 
 ## Next steps
 
-1. Resolve open question 1 (commander + dynamic completion) — highest information per unit effort.
-2. Fill the `?` cells for cac and clipanion.
+1. **Prototype one small CLI on commander** — `fob-orc` or `fob-zb` (~10 commits each, far cheaper
+   than `fob-worker`'s 126). Include the hand-rolled completion script so the real cost is measured,
+   not estimated. This is now the highest-information step: the paper comparison is a genuine trade,
+   so only a build settles it.
+2. Fill the `?` cells for cac and clipanion. Clipanion is the most promising unexamined option —
+   it powers Yarn Berry, which ships working completion.
 3. Benchmark startup locally rather than trusting the secondary source.
 4. Only then: recommend, or close as "stay on yargs."
 
