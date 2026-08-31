@@ -16,7 +16,18 @@
     "dispatcher",
     "finops"
   ],
-  "license": "MIT",
+  "license": "Apache-2.0",
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
     "jest": "^29.7.0"
