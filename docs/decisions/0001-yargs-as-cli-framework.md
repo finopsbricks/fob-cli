@@ -16,7 +16,7 @@ repo — not by depending on a shared `cli-kit` package. That copy rule is itsel
 [cli-standards-and-wrappers](../wip/cli-standards-and-wrappers.md): *"Standard as documentation,
 NOT a `cli-kit`/generator."*
 
-`@fob/cli` (this repo) is the exception that proves the rule: it is a git-style dispatcher that
+`@finopsbricks/fob-cli` (this repo) is the exception that proves the rule: it is a git-style dispatcher that
 shells out to sibling `fob-*` binaries on PATH, parses no command tree of its own, and therefore has
 **zero dependencies**.
 
@@ -25,11 +25,11 @@ Current adopters — all on `^17.7.2`:
 | Package | Repo |
 |---|---|
 | `@fob/cli-fobs` | `cli/cli-fobs` |
-| `@fob/email` | `cli/fob-email` |
-| `@fob/orc` | `cli/fob-orc` |
+| `@finopsbricks/fob-email` | `cli/fob-email` |
+| `@finopsbricks/fob-orc` | `cli/fob-orc` |
 | `@finopsbricks/fob-stm` | `cli/fob-stm` |
-| `@fob/worker` | `cli/fob-worker` |
-| `@fob/zb` | `cli/fob-zb` |
+| `@finopsbricks/fob-worker` | `cli/fob-worker` |
+| `@finopsbricks/fob-zb` | `cli/fob-zb` |
 | *(also)* `ops/devops/scripts/github-activity` | outside `cli/` |
 
 ## Why

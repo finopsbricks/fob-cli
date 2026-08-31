@@ -23,7 +23,7 @@ Each `fob-<tool>` stays independently installed, versioned, and runnable on its 
 
 | Command | Binary | What |
 |---|---|---|
-| `fob orc` | `fob-orc` (`@fob/orc`) | Orchestrator control plane (stations, work-records, tags) |
-| `fob worker` | `fob-worker` (`@fob/worker`) | Local worker plane (steps, lines, workpieces, procs) |
-| `fob stm` | `fob-stm` (`@fob/stm`) | Statements app |
-| `fob email` | `fob-email` (`@fob/email`) | Email |
+| `fob orc` | `fob-orc` (`@finopsbricks/fob-orc`) | Orchestrator control plane (stations, work-records, tags) |
+| `fob worker` | `fob-worker` (`@finopsbricks/fob-worker`) | Local worker plane (steps, lines, workpieces, procs) |
+| `fob stm` | `fob-stm` (`@finopsbricks/fob-stm`) | Statements app |
+| `fob email` | `fob-email` (`@finopsbricks/fob-email`) | Email |
