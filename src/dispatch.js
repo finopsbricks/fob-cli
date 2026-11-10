@@ -263,11 +263,14 @@ complete -o bashdefault -o default -F _fob_completions fob
  * delegated to `fob-<tool> --get-yargs-completions`. PowerShell does the prefix
  * filtering that `compgen -W` does in bash.
  *
- * Gotcha handled here: Windows PowerShell 5.1 (and 7.x with
- * $PSNativeCommandArgumentPassing = 'Legacy') silently drops empty-string
- * arguments to native commands, and yargs needs the empty "current word" to
- * complete the *next* position. In legacy mode we pass '""' instead, which
- * the child's argv parser decodes back to ''.
+ * Gotcha handled here: yargs needs the empty "current word" to complete the
+ * *next* position, but PowerShell drops empty-string arguments to native
+ * commands under Legacy passing: Windows PowerShell 5.1, 7.0–7.2,
+ * $PSNativeCommandArgumentPassing = 'Legacy', and also the 7.3+ default
+ * 'Windows' mode when the target is a .cmd/.bat. In those cases we pass '""'
+ * instead, which the child's argv parser decodes back to ''. Under 'Standard'
+ * passing '""' would arrive as two literal quotes, so the choice depends on
+ * the resolved command (npm's .ps1 shim forwards to node.exe, not a batch file).
  */
 export function powershellCompletionScript() {
   return `###-begin-fob-completions-###
@@ -302,12 +305,19 @@ Register-ArgumentCompleter -Native -CommandName 'fob', 'fob.exe', 'fob.cmd', 'fo
     $candidates = @('bash', 'zsh', 'powershell')
   } else {
     $exe = "fob-$($words[0])"
-    if (-not (Get-Command $exe -ErrorAction SilentlyContinue)) { return }
+    $cmd = Get-Command $exe -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $cmd) { return }
     $rest = @($words | Select-Object -Skip 1)
-    if ($PSVersionTable.PSVersion.Major -lt 7 -or $PSNativeCommandArgumentPassing -eq 'Legacy') {
+    # Empty args reach the native program only under 'Standard' passing (7.3+), and
+    # 'Windows' mode (the 7.3+ default) still uses Legacy rules for batch files.
+    # An npm .ps1 shim forwards to node.exe (not a batch), so only the PS version/mode matters there.
+    $mode = $PSNativeCommandArgumentPassing
+    $isBatch = $cmd.CommandType -eq 'Application' -and [IO.Path]::GetExtension($cmd.Source) -in '.cmd', '.bat'
+    $legacy = $PSVersionTable.PSVersion.Major -lt 7 -or -not $mode -or $mode -eq 'Legacy' -or ($mode -eq 'Windows' -and $isBatch)
+    if ($legacy) {
       $rest = @($rest | ForEach-Object { if ($_ -eq '') { '""' } else { $_ } })
     }
-    $candidates = @(& $exe --get-yargs-completions $exe @rest 2>$null)
+    $candidates = @(& $cmd.Source --get-yargs-completions $exe @rest 2>$null)
   }
 
   $candidates |

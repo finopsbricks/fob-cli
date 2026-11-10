@@ -152,7 +152,9 @@ describe('win32 PATH resolution', () => {
     expect(resolveTool('stm', wenv, W)).toBe(join(wdir, 'fob-stm.cmd'));
     expect(resolveTool('orc', wenv, W)).toBe(join(wdir, 'fob-orc.exe'));
     expect(resolveTool('lgr', wenv, W)).toBe(join(wdir2, 'fob-lgr.bat'));
-    expect(resolveTool('upper', wenv, W)).not.toBeNull();
+    // `FOB-Upper.CMD` is found via a constructed `fob-upper.cmd`, which relies on a
+    // case-insensitive filesystem: real Windows (and macOS) have one, Linux CI doesn't.
+    if (process.platform !== 'linux') expect(resolveTool('upper', wenv, W)).not.toBeNull();
   });
 
   it('honours PATHEXT order within a directory', () => {

@@ -54,7 +54,15 @@ describeWin('PowerShell completer (win32)', () => {
        const out = words.length <= 1 ? ['alpha', 'beta'] : words[0] === 'alpha' ? ['one', 'two'] : [];
        process.stdout.write(out.join('\\n') + '\\n');\n`,
     );
+    // qqfake: a lone .cmd, so PowerShell runs the batch file (Legacy arg rules in 'Windows' mode).
     writeFileSync(join(dir, 'fob-qqfake.cmd'), `@ECHO off\r\n"${process.execPath}" "%~dp0\\fake.cjs" %*\r\n`);
+    // qqnpm: npm's full trio. PowerShell picks the .ps1, which forwards $args to node.exe.
+    writeFileSync(join(dir, 'fob-qqnpm'), '#!/bin/sh\nexit 99\n');
+    writeFileSync(join(dir, 'fob-qqnpm.cmd'), `@ECHO off\r\n"${process.execPath}" "%~dp0\\fake.cjs" %*\r\n`);
+    writeFileSync(
+      join(dir, 'fob-qqnpm.ps1'),
+      `$basedir = Split-Path $MyInvocation.MyCommand.Definition -Parent\r\n& "${process.execPath}" "$basedir/fake.cjs" $args\r\nexit $LASTEXITCODE\r\n`,
+    );
   });
 
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
@@ -68,7 +76,10 @@ describeWin('PowerShell completer (win32)', () => {
     ].join('\n');
     const env = { ...process.env, PATH: `${dir};${process.env.PATH || process.env.Path || ''}` };
     delete env.Path;
-    const res = spawnSync(shell, ['-NoProfile', '-NonInteractive', '-Command', ps], { env, encoding: 'utf8' });
+    const res = spawnSync(shell, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', ps], {
+      env,
+      encoding: 'utf8',
+    });
     return res.stdout.split(/\r?\n/).slice(0, lines.length);
   };
 
@@ -78,19 +89,26 @@ describeWin('PowerShell completer (win32)', () => {
 
   it.each(['powershell.exe', 'pwsh.exe'])('completes tools, built-ins and delegated words in %s', (shell) => {
     if (!shells.includes(shell)) return; // not installed here
-    const [top, partial, sub, subPartial, nested, comp] = complete(shell, [
+    const [top, partial, sub, subPartial, nested, comp, npmSub, npmNested] = complete(shell, [
       'fob ',
-      'fob qq',
+      'fob qqf',
       'fob qqfake ',
       'fob qqfake al',
       'fob qqfake alpha ',
       'fob completion p',
+      'fob qqnpm ',
+      'fob qqnpm alpha ',
     ]);
-    expect(top.split(',')).toEqual(expect.arrayContaining(['help', 'install', 'completion', 'qqfake']));
+    const tops = top.split(',');
+    expect(tops).toEqual(expect.arrayContaining(['help', 'install', 'completion', 'qqfake', 'qqnpm']));
+    expect(tops.filter((t) => t === 'qqnpm')).toHaveLength(1); // .ps1 + .cmd listed once
     expect(partial).toBe('qqfake');
     expect(sub).toBe('alpha,beta');
     expect(subPartial).toBe('alpha');
-    expect(nested).toBe('one,two'); // needs the empty current word to reach the tool
+    // The next two need the empty current word to survive PowerShell's native-arg passing:
+    expect(nested).toBe('one,two'); // via a .cmd
     expect(comp).toBe('powershell');
+    expect(npmSub).toBe('alpha,beta');
+    expect(npmNested).toBe('one,two'); // via npm's .ps1 → node.exe
   }, 60000);
 });
