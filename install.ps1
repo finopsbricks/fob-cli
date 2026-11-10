@@ -55,7 +55,11 @@
         if ($line.Trim() -match '^([0-9a-fA-F]{64})\s+\*?(.+)$' -and $Matches[2].Trim() -eq $asset) { $expected = $Matches[1].ToLower(); break }
       }
       if ($expected) {
-        $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $tmp).Hash.ToLower()
+        # .NET directly, not Get-FileHash: when powershell.exe is started from pwsh, the
+        # inherited PSModulePath can stop 5.1 from auto-loading Microsoft.PowerShell.Utility.
+        $sha = [Security.Cryptography.SHA256]::Create()
+        $fs = [IO.File]::OpenRead($tmp)
+        try { $actual = (-join ($sha.ComputeHash($fs) | ForEach-Object { $_.ToString('x2') })) } finally { $fs.Dispose(); $sha.Dispose() }
         if ($expected -ne $actual) { Write-Error "fob: checksum mismatch for $asset - aborting."; return }
         Write-Host 'fob: checksum ok'
       }
