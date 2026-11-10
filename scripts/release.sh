@@ -9,7 +9,7 @@
 #
 # Reuses the same FOB_BIN / FOB_ENTRY overrides as build.sh, so a sibling repo
 # publishes its own <BIN>-* assets into the shared bucket. Uploads whatever is in
-# dist/, plus install.sh and catalog.json when present (dispatcher repo only).
+# dist/, plus install.sh, install.ps1 and catalog.json when present (dispatcher repo only).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -25,6 +25,7 @@ wrangler whoami >/dev/null 2>&1 || { echo "release: not logged in — run 'wrang
 ct() { case "$1" in
   *SHA256SUMS)  echo text/plain ;;
   install.sh)   echo text/x-shellscript ;;
+  install.ps1)  echo text/plain ;;
   catalog.json) echo application/json ;;
   *)            echo application/octet-stream ;;
 esac; }
@@ -48,6 +49,7 @@ for f in dist/*; do
 done
 # Root-level, family-wide files (present in the dispatcher repo only).
 [ -f install.sh ]   && put install.sh install.sh
+[ -f install.ps1 ]  && put install.ps1 install.ps1
 [ -f catalog.json ] && put catalog.json catalog.json
 
 echo "→ verifying over https…"
@@ -55,6 +57,7 @@ fail=0
 check() { code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$BASE_URL/$1"); printf "  %s  %s\n" "$code" "$1"; [ "$code" = "200" ] || fail=1; }
 for f in dist/*; do [ -f "$f" ] && check "$(basename "$f")"; done
 [ -f install.sh ]   && check install.sh
+[ -f install.ps1 ]  && check install.ps1
 [ -f catalog.json ] && check catalog.json
 
 if [ "$fail" = "0" ]; then

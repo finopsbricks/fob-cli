@@ -22,6 +22,22 @@ Each `fob-<tool>` stays independently installed, versioned, and runnable on its 
 `fob --version` prints the dispatcher's version. `fob completion [bash|zsh|powershell]`
 prints a tab-completion script (see below).
 
+## Install
+
+Self-contained binary, no Node needed, installed to `~/.fob/bin`. The installers don't edit your
+PATH or shell profile; if the folder isn't on PATH they print the line to add.
+
+```bash
+curl -fsSL https://get.finopsbricks.com/install.sh | sh                  # macOS / Linux
+```
+
+```powershell
+irm https://get.finopsbricks.com/install.ps1 | iex                       # Windows (PowerShell)
+```
+
+Pin a version with `FOB_VERSION=v1.1.0` (`$env:FOB_VERSION = 'v1.1.0'` in PowerShell). Or use npm:
+`npm install -g @finopsbricks/fob-cli`.
+
 ## Windows
 
 Works in PowerShell (5.1 and 7+) and cmd. On Windows, "executable" means an extension

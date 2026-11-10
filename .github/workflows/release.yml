@@ -36,6 +36,7 @@ jobs:
           ct() { case "$1" in
             SHA256SUMS) echo text/plain ;;
             install.sh) echo text/x-shellscript ;;
+            install.ps1) echo text/plain ;;
             *)          echo application/octet-stream ;;
           esac; }
           publish() { # publish <localpath> <key>
@@ -48,3 +49,4 @@ jobs:
             publish "$f" "$TAG/$name"     # pinned, under the version prefix
           done
           publish install.sh install.sh
+          publish install.ps1 install.ps1
