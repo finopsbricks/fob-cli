@@ -84,7 +84,7 @@ describe('plan', () => {
     expect(plan(['install'], env).action).toBe('error');
   });
   it('routes completion to the completion action', () => {
-    expect(plan(['completion'], env)).toEqual({ action: 'completion' });
+    expect(plan(['completion'], env)).toMatchObject({ action: 'completion' });
   });
   it('routes remove/uninstall/rm to the remove action with the tool name', () => {
     expect(plan(['remove', 'email'], env)).toEqual({ action: 'remove', tool: 'email' });

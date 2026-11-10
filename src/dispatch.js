@@ -135,8 +135,9 @@ export function resolveTool(tool, env = process.env, platform = process.platform
  * The `fob help` / bare-`fob` listing text.
  * @param {string[]} installed  discovered tool names (on PATH)
  * @param {object|null} [catalog]  optional catalog → adds an "available" section
+ * @param {NodeJS.Platform} [platform]  picks the tab-completion hint (PowerShell on win32)
  */
-export function formatToolList(installed, catalog = null) {
+export function formatToolList(installed, catalog = null, platform = process.platform) {
   const lines = [
     'fob — git-style dispatcher for the fob-<tool> CLI family',
     '',
@@ -168,8 +169,20 @@ export function formatToolList(installed, catalog = null) {
   }
 
   lines.push('', "Run `fob <tool> --help`, or `fob install <tool>` to add one.");
-  lines.push('Tab completion: add `source <(fob completion)` to your ~/.bashrc or ~/.zshrc.');
+  lines.push(
+    platform === 'win32'
+      ? 'Tab completion: add `fob completion powershell | Out-String | Invoke-Expression` to your $PROFILE.'
+      : 'Tab completion: add `source <(fob completion)` to your ~/.bashrc or ~/.zshrc.',
+  );
   return lines.join('\n');
+}
+
+/** Shells `fob completion <shell>` can emit a script for. */
+export const COMPLETION_SHELLS = ['bash', 'zsh', 'powershell'];
+
+/** Default shell for a bare `fob completion`: PowerShell on Windows, bash elsewhere. */
+export function defaultCompletionShell(platform = process.platform) {
+  return platform === 'win32' ? 'powershell' : 'bash';
 }
 
 const LIST_TOKENS = new Set(['help', '--help', '-h', '--list', 'list', 'ls', undefined]);
@@ -189,7 +202,8 @@ const COMPLETION_TOKENS = new Set(['completion']);
  * Tools are discovered live rather than baked in, so installing a new
  * `fob-<tool>` starts completing without re-sourcing this script.
  */
-export function completionScript() {
+export function completionScript(shell = 'bash') {
+  if (shell === 'powershell' || shell === 'pwsh') return powershellCompletionScript();
   return `###-begin-fob-completions-###
 #
 # fob command completion script
@@ -241,16 +255,84 @@ complete -o bashdefault -o default -F _fob_completions fob
 }
 
 /**
+ * The PowerShell (Windows PowerShell 5.1 and PowerShell 7+) completer for `fob`.
+ * Same contract as the bash script: tool names at word 1 (discovered live via
+ * Get-Command), catalog-style names after install/remove, and everything else
+ * delegated to `fob-<tool> --get-yargs-completions`. PowerShell does the prefix
+ * filtering that `compgen -W` does in bash.
+ *
+ * Gotcha handled here: Windows PowerShell 5.1 (and 7.x with
+ * $PSNativeCommandArgumentPassing = 'Legacy') silently drops empty-string
+ * arguments to native commands, and yargs needs the empty "current word" to
+ * complete the *next* position. In legacy mode we pass '""' instead, which
+ * the child's argv parser decodes back to ''.
+ */
+export function powershellCompletionScript() {
+  return `###-begin-fob-completions-###
+#
+# fob command completion script for PowerShell
+#
+# Installation: add this line to your $PROFILE
+#   fob completion powershell | Out-String | Invoke-Expression
+#
+Register-ArgumentCompleter -Native -CommandName 'fob', 'fob.exe', 'fob.cmd', 'fob.ps1' -ScriptBlock {
+  param($wordToComplete, $commandAst, $cursorPosition)
+
+  # Words before the cursor, minus 'fob' itself; a trailing space starts a new, empty word.
+  $words = @($commandAst.CommandElements |
+    Where-Object { $_.Extent.StartOffset -lt $cursorPosition } |
+    ForEach-Object { $_.Extent.Text } |
+    Select-Object -Skip 1)
+  if ($wordToComplete -eq '') { $words += '' }
+
+  $toolNames = {
+    Get-Command -Name 'fob-*' -CommandType Application, ExternalScript -ErrorAction SilentlyContinue |
+      ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_.Name).Substring(4) } |
+      Where-Object { $_ } |
+      Sort-Object -Unique
+  }
+
+  if ($words.Count -le 1) {
+    $candidates = @('help', 'list', 'install', 'remove', 'completion') + @(& $toolNames)
+  } elseif ($words[0] -in 'install', 'add', 'remove', 'uninstall', 'rm') {
+    $candidates = @(& $toolNames)
+  } elseif ($words[0] -eq 'completion') {
+    $candidates = @('bash', 'zsh', 'powershell')
+  } else {
+    $exe = "fob-$($words[0])"
+    if (-not (Get-Command $exe -ErrorAction SilentlyContinue)) { return }
+    $rest = @($words | Select-Object -Skip 1)
+    if ($PSVersionTable.PSVersion.Major -lt 7 -or $PSNativeCommandArgumentPassing -eq 'Legacy') {
+      $rest = @($rest | ForEach-Object { if ($_ -eq '') { '""' } else { $_ } })
+    }
+    $candidates = @(& $exe --get-yargs-completions $exe @rest 2>$null)
+  }
+
+  $candidates |
+    Where-Object { $_ -and $_ -like "$wordToComplete*" } |
+    ForEach-Object { [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_) }
+}
+###-end-fob-completions-###
+`;
+}
+
+/**
  * Decide what the launcher should do for a given argv (no side effects).
  * @param {string[]} argv  args after `fob`
  * @param {NodeJS.ProcessEnv} [env]
  * @param {NodeJS.Platform} [platform]
- * @returns {{action:'list'} | {action:'completion'} | {action:'install'|'remove', tool:string} | {action:'error', message:string} | {action:'exec', exe:string, args:string[]}}
+ * @returns {{action:'list'} | {action:'completion', shell:string} | {action:'install'|'remove', tool:string} | {action:'error', message:string} | {action:'exec', exe:string, args:string[]}}
  */
 export function plan(argv, env = process.env, platform = process.platform) {
   const [tool, ...rest] = argv;
   if (LIST_TOKENS.has(tool)) return { action: 'list' };
-  if (COMPLETION_TOKENS.has(tool)) return { action: 'completion' };
+  if (COMPLETION_TOKENS.has(tool)) {
+    const shell = (rest[0] || defaultCompletionShell(platform)).toLowerCase().replace(/^pwsh$/, 'powershell');
+    if (!COMPLETION_SHELLS.includes(shell)) {
+      return { action: 'error', message: `fob: no completion for '${rest[0]}'. Shells: ${COMPLETION_SHELLS.join(', ')}.` };
+    }
+    return { action: 'completion', shell };
+  }
 
   if (INSTALL_TOKENS.has(tool)) {
     if (!rest[0]) return { action: 'error', message: "fob: 'install' needs a tool name, e.g. `fob install email`." };

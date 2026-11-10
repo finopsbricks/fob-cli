@@ -28,7 +28,7 @@ async function main() {
   }
 
   if (decision.action === 'completion') {
-    console.log(completionScript());
+    console.log(completionScript(decision.shell));
     return 0;
   }
 
