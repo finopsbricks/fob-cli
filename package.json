@@ -9,7 +9,7 @@
   "scripts": {
     "build": "bash scripts/build.sh",
     "release": "bash scripts/release.sh",
-    "test": "node --experimental-vm-modules node_modules/.bin/jest"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
   },
   "keywords": [
     "cli",

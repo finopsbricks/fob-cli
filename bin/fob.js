@@ -11,6 +11,7 @@ import { spawnSync } from 'node:child_process';
 import { completionScript, discoverTools, formatToolList, plan } from '../src/dispatch.js';
 import { getCatalog } from '../src/catalog.js';
 import { installTool, removeTool } from '../src/install.js';
+import { spawnSpec } from '../src/spawn.js';
 
 async function main() {
   const decision = plan(process.argv.slice(2));
@@ -46,8 +47,9 @@ async function main() {
     return 1;
   }
 
-  // action === 'exec' — transparent proxy.
-  const result = spawnSync(decision.exe, decision.args, { stdio: 'inherit' });
+  // action === 'exec' — transparent proxy (via cmd.exe for Windows .cmd shims; see spawn.js).
+  const spec = spawnSpec(decision.exe, decision.args);
+  const result = spawnSync(spec.command, spec.args, spec.options);
   if (result.error) {
     console.error(`fob: failed to run ${decision.exe}: ${result.error.message}`);
     return 1;
