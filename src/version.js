@@ -4,4 +4,4 @@
  * package.json isn't on disk next to them. tests/version.test.js keeps this in
  * sync with package.json, so bump both together.
  */
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';
