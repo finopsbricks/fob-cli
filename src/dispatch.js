@@ -186,6 +186,8 @@ export function defaultCompletionShell(platform = process.platform) {
 }
 
 const LIST_TOKENS = new Set(['help', '--help', '-h', '--list', 'list', 'ls', undefined]);
+// Flags only: a bare `version` stays dispatchable to a hypothetical `fob-version`.
+const VERSION_TOKENS = new Set(['--version', '-v', '-V']);
 const INSTALL_TOKENS = new Set(['install', 'add']);
 const REMOVE_TOKENS = new Set(['remove', 'uninstall', 'rm']);
 const COMPLETION_TOKENS = new Set(['completion']);
@@ -321,11 +323,12 @@ Register-ArgumentCompleter -Native -CommandName 'fob', 'fob.exe', 'fob.cmd', 'fo
  * @param {string[]} argv  args after `fob`
  * @param {NodeJS.ProcessEnv} [env]
  * @param {NodeJS.Platform} [platform]
- * @returns {{action:'list'} | {action:'completion', shell:string} | {action:'install'|'remove', tool:string} | {action:'error', message:string} | {action:'exec', exe:string, args:string[]}}
+ * @returns {{action:'list'} | {action:'version'} | {action:'completion', shell:string} | {action:'install'|'remove', tool:string} | {action:'error', message:string} | {action:'exec', exe:string, args:string[]}}
  */
 export function plan(argv, env = process.env, platform = process.platform) {
   const [tool, ...rest] = argv;
   if (LIST_TOKENS.has(tool)) return { action: 'list' };
+  if (VERSION_TOKENS.has(tool)) return { action: 'version' };
   if (COMPLETION_TOKENS.has(tool)) {
     const shell = (rest[0] || defaultCompletionShell(platform)).toLowerCase().replace(/^pwsh$/, 'powershell');
     if (!COMPLETION_SHELLS.includes(shell)) {

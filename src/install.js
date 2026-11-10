@@ -6,10 +6,11 @@
  */
 
 import { mkdirSync, writeFileSync, chmodSync, rmSync, existsSync } from 'node:fs';
-import { join, delimiter } from 'node:path';
+import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { getCatalog, baseUrl, platform, binName, assetName } from './catalog.js';
+import { pathDirs } from './dispatch.js';
 
 /** Managed install dir (overridable, matches install.sh). */
 export function binDir() {
@@ -32,8 +33,29 @@ function parseSums(text) {
   return map;
 }
 
-function onPath(dir) {
-  return (process.env.PATH || '').split(delimiter).includes(dir);
+/**
+ * Is `dir` on PATH? Trailing separators are ignored. On win32, comparison is
+ * case-insensitive and `/` equals `\`, and `Path` is found however it's cased.
+ */
+export function onPath(dir, env = process.env, plat = process.platform) {
+  const norm = (p) => {
+    const s = p.replace(/[\\/]+$/, '');
+    return plat === 'win32' ? s.replace(/\//g, '\\').toLowerCase() : s;
+  };
+  const want = norm(dir);
+  return pathDirs(env, plat).some((d) => norm(d) === want);
+}
+
+/** Shell-appropriate instructions for putting `dir` on PATH. */
+export function pathHint(dir, plat = process.platform) {
+  if (plat === 'win32') {
+    const quoted = dir.replace(/'/g, "''"); // PowerShell single-quoted string
+    return [
+      `fob: ${dir} is not on your PATH. Add it for your user (PowerShell), then open a new terminal:`,
+      `  [Environment]::SetEnvironmentVariable('Path', '${quoted};' + [Environment]::GetEnvironmentVariable('Path', 'User'), 'User')`,
+    ];
+  }
+  return [`fob: ${dir} is not on your PATH. Add it, then restart your shell:`, `  export PATH="${dir}:$PATH"`];
 }
 
 /**
@@ -84,8 +106,7 @@ export async function installTool(tool, { log = (s) => console.error(s) } = {}) 
 
   if (!onPath(dir)) {
     log('');
-    log(`fob: ${dir} is not on your PATH. Add it, then restart your shell:`);
-    log(`  export PATH="${dir}:$PATH"`);
+    for (const line of pathHint(dir)) log(line);
   }
   return dest;
 }
