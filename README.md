@@ -19,6 +19,25 @@ with `fob: '<tool>' is not a fob command` (exit 1).
 
 Each `fob-<tool>` stays independently installed, versioned, and runnable on its own.
 
+`fob --version` prints the dispatcher's version. `fob completion [bash|zsh|powershell]`
+prints a tab-completion script (see below).
+
+## Windows
+
+Works in PowerShell (5.1 and 7+) and cmd. On Windows, "executable" means an extension
+listed in `%PATHEXT%` that `fob` can launch: `.exe`/`.com` run directly, `.cmd`/`.bat`
+(what `npm install -g` creates) run through `cmd.exe`, with arguments escaped so they
+arrive unchanged. The extension is dropped from the tool name, so `fob-stm.cmd` is
+`fob stm`. npm's extra `fob-stm` (sh) and `fob-stm.ps1` shims are ignored.
+
+Tab completion: add this to your `$PROFILE`:
+
+```powershell
+fob completion powershell | Out-String | Invoke-Expression
+```
+
+On macOS/Linux: `source <(fob completion)` in `~/.bashrc` or `~/.zshrc`.
+
 ## The family
 
 | Command | Binary | What |

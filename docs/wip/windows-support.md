@@ -1,6 +1,6 @@
 # `fob` dispatcher — Windows support
 
-## Status: BUG — found while smoke-testing the fob CLI family on Windows 11 (2026-11-11). Not started.
+## Status: DONE (2026-11-11) — bugs 1–3 and the "also check" items are implemented; see "Implementation" at the end. Found while smoke-testing the fob CLI family on Windows 11.
 
 The `fob-<tool>` CLIs themselves run fine on Windows when called directly (`fob-stm accounts list`,
 `fob-actual auth status`, `fobs orgs list` etc. all returned live data with profiles copied from the Mac).
@@ -103,3 +103,51 @@ emits a `Register-ArgumentCompleter -Native -CommandName fob` block calling
   doesn't happen in a normal interactive window or in PowerShell 7.
 - `fob --version` → `'--version' is not a fob command`. It's consistent with the git-style design,
   but maybe add `--version`/`-v` to the reserved built-ins since every `fob-<tool>` supports it.
+
+---
+
+## Implementation
+
+| Phase | Commit | What |
+|---|---|---|
+| 1 | `fix(fob): resolve and exec fob-<tool> on Windows` | Bugs 1 and 2 |
+| 2 | `feat(fob): PowerShell tab completion` | Bug 3 |
+| 3 | `feat(fob): Windows-aware fob install PATH check, and fob --version` | "Also check" + `--version` |
+| 4 | `ci: test on Linux, macOS and Windows` + this update | CI matrix, README |
+
+Decisions, and where they differ from the plan above:
+
+- **No cross-spawn dependency.** Resolution is our own PATHEXT logic (`src/dispatch.js`). Exec
+  ports cross-spawn's cmd.exe escaping into `src/spawn.js` (about 20 lines). We *always*
+  double-escape for `.cmd`/`.bat`, because cross-spawn only does that for shims under
+  `node_modules/.bin`, and npm's global shims in `%APPDATA%\npm` also forward `%*`. With
+  cross-spawn's check, `fob stm search "a&b"` would have broken.
+- Only `.exe`/`.com`/`.cmd`/`.bat` count, even when PATHEXT lists `.JS`/`.VBS`/`.MSC`. Those
+  can't be launched with CreateProcess, and a `fob-x.js` would open in Windows Script Host.
+- Every dispatch function takes a `platform` argument, so the win32 rules are unit-tested on
+  macOS/Linux too. Real Windows behaviour (the `.cmd` shim round-trip with `a&b`, `100%`,
+  `%PATH%`, `"`, trailing `\`, empty args, unicode; PowerShell TabExpansion2) is covered by
+  e2e tests that run on `windows-latest`.
+- Tool names with `/` or `\` are rejected (`fob ../x` used to be able to escape the PATH dir on
+  POSIX too).
+- `fob completion` with no shell defaults to `powershell` on win32 and `bash` elsewhere, so
+  existing `source <(fob completion)` setups are unchanged.
+- PowerShell 5.1 drops empty native args, which breaks yargs' "complete the next word". The
+  completer passes `'""'` in legacy mode instead.
+- `--version` reads `src/version.js`, not package.json: the Bun-compiled binaries don't carry
+  package.json. `createRequire` failed with `Cannot find module` in a `bun build --compile`
+  test. A test keeps the two in sync.
+- The `npm test` script ran `node node_modules/.bin/jest`, which on Windows is an sh shim (the
+  same bug class). It now runs `jest/bin/jest.js`.
+
+Verified on Windows 11 / Node 26 / PowerShell 5.1 against the real npm-installed family
+(`fob help`, `fob stm --version`, `fob actual auth status`, exit-code passthrough via `fob orc
+status`), and with a Bun-compiled `fob.exe`.
+
+### Follow-ups (not done here)
+
+- A Windows `install.ps1` equivalent of `install.sh` (`irm https://get.finopsbricks.com/install.ps1 | iex`).
+  `fob install <tool>` already works on Windows (downloads `fob-<tool>-windows-x64.exe`, which
+  resolution now finds), but bootstrapping `fob` itself without npm has no Windows path yet.
+- PowerShell 7 hasn't been tested by hand, only by CI (the completion test runs `pwsh` when present).
+- The sibling CLIs' own `npm test` scripts may have the same `node_modules/.bin/jest` problem.
