@@ -1,6 +1,7 @@
 # `fob` dispatcher — Windows support
 
 ## Status: DONE (2026-11-11) — bugs 1–3 and the "also check" items are implemented; see "Implementation" at the end. Found while smoke-testing the fob CLI family on Windows 11.
+## Priority: P2: fixes are built but unreleased, so the live 1.0.0 dispatcher still fails on Windows (release-v1.1.0 ships them)
 
 The `fob-<tool>` CLIs themselves run fine on Windows when called directly (`fob-stm accounts list`,
 `fob-actual auth status`, `fobs orgs list` etc. all returned live data with profiles copied from the Mac).

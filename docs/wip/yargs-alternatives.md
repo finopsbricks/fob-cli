@@ -1,6 +1,7 @@
 # WIP — Evaluating alternatives to yargs
 
 **Status:** open, not started. No recommendation yet.
+## Priority: P4: yargs works in all six repos; this only re-checks the choice
 **Opened:** 2026-08-13
 **Decision this would revisit:** [D1 — yargs as CLI framework](../decisions/0001-yargs-as-cli-framework.md)
 

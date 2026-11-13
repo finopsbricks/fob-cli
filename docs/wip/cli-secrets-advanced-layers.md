@@ -1,6 +1,7 @@
 # CLI Secrets — Advanced Layers & Token Lifecycle (future, opt-in)
 
 ## Status: NOT STARTED (deferred — no current pull)
+## Priority: P4: deferred opt-in security layers; the plaintext baseline works and nobody is asking
 
 The baseline config/secrets standard for the `fob-<tool>` family shipped and is done (plaintext
 `0600` under `~/.fob/<tool>/`, `config profiles <verb>` surface, org-identity caching; see

@@ -1,6 +1,7 @@
 # Remote MCP: exposing the `fob-*` family to web-chat accountants
 
 ## Status: NOT STARTED
+## Priority: P4: design capture for a hosted product; nothing built and no user waiting on it
 
 Design capture for turning the `fob-*` CLI family into a hosted product: customers
 use Claude.ai / ChatGPT (web, not terminal), ask an agent to do bookkeeping work, and
