@@ -2,6 +2,7 @@
 
 ## Status: IN PROGRESS (~75%) — Phase 1 curl install **VALIDATED END-TO-END on real infra**: `curl -fsSL https://get.finopsbricks.com/install.sh | sh` downloads the platform binary from Cloudflare R2, verifies the checksum, and installs a working `fob` — closed-source, free plan. Remaining: add CI secrets + cut first tag; `install.ps1` (deferred). Later rungs still gated.
 ## Priority: P3: curl install works end to end; left are CI secrets, the first tag and later channels
+## Bet: first-class-cli
 
 Decide *how the `fob-<tool>` family reaches each audience*, one experiment at a time. This is the
 **decisions** tracker that sits on top of the **knowledge** in

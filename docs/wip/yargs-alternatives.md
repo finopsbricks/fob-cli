@@ -2,6 +2,7 @@
 
 **Status:** open, not started. No recommendation yet.
 ## Priority: P4: yargs works in all six repos; this only re-checks the choice
+## Bet: first-class-cli
 **Opened:** 2026-08-13
 **Decision this would revisit:** [D1 — yargs as CLI framework](../decisions/0001-yargs-as-cli-framework.md)
 

@@ -2,6 +2,7 @@
 
 ## Status: BLOCKED — release commit is ready (`chore: release v1.1.0`, local on the Mac, not tagged, not pushed). Needs npm login + an R2 upload route. Deferred on 2026-11-11.
 ## Priority: P2: the live 1.0.0 `fob` dispatcher fails on Windows; calling `fob-<tool>` directly still works
+## Bet: first-class-cli
 
 v1.1.0 ships the work in [windows-support.md](./windows-support.md) plus `install.ps1`. It matters
 because the **live 1.0.0 is broken on Windows**. Installing it with `install.ps1` into a scratch dir

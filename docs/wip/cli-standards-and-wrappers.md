@@ -2,6 +2,7 @@
 
 ## Status: IN PROGRESS (~80%) — Phase 3 closed (fob-stm unification + worker rewrite shipped) and **Phase 4 dispatcher DONE** (via the cli-fob split → `fob-orc` + `fob-worker` + the `fob` launcher). Remaining: Phase 5 (first external wrapper, e.g. `fob-qbo`) + rollout housekeeping (publish, GitHub repo rename, wire the 4 binaries on PATH).
 ## Priority: P3: the family CLIs ship and work; left are the first external wrapper and rollout housekeeping
+## Bet: first-class-cli
 
 Define a documented CLI standard (not a shared framework) and use it to build a family of
 thin, consistent command-line wrappers — `fob-<tool>` — over both FinOpsBricks apps and
