@@ -62,3 +62,4 @@ On macOS/Linux: `source <(fob completion)` in `~/.bashrc` or `~/.zshrc`.
 | `fob worker` | `fob-worker` (`@finopsbricks/fob-worker`) | Local worker plane (steps, lines, workpieces, procs) |
 | `fob stm` | `fob-stm` (`@finopsbricks/fob-stm`) | Statements app |
 | `fob email` | `fob-email` (`@finopsbricks/fob-email`) | Email |
+| `fob mail` | `fob-mail` (`@finopsbricks/fob-mail`) | Mail app: a firm's client mailboxes |

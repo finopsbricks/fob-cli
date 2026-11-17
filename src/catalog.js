@@ -18,6 +18,7 @@ export const CATALOG = {
   base_url: DEFAULT_BASE_URL,
   tools: {
     email: { summary: 'send & fetch mailboxes' },
+    mail: { summary: "firms' client mailboxes (Mail)" },
     orc: { summary: 'orchestration stations' },
     stm: { summary: 'statements ingest & query' },
     worker: { summary: 'local worker processes' },
